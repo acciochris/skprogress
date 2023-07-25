@@ -1,5 +1,6 @@
 """A progress bar for sklearn"""
 
+import builtins
 import re
 import sys
 from collections.abc import Iterable
@@ -58,8 +59,19 @@ class ProgressIO(StringIO):
 
 
 @contextmanager
-def skprogress():
-    real_stdout = sys.stdout
-    sys.stdout = ProgressIO(real_stdout)
-    yield sys.stdout
-    sys.stdout = real_stdout
+def skprogress(*, via_print: bool = True):
+    if not via_print:
+        real_stdout = sys.stdout
+        sys.stdout = ProgressIO(real_stdout)
+        yield sys.stdout
+        sys.stdout = real_stdout
+    else:
+        old_print = print
+        progress = ProgressIO(sys.stdout)
+
+        def _print(*args, **kwargs):
+            old_print(*args, file=progress, **kwargs)
+
+        builtins.print = _print
+        yield progress
+        builtins.print = old_print
